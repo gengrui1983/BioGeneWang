@@ -9,6 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim
 import torch.utils.data
+from torch.autograd import Variable
 
 from dataset.dataset import BioData
 
@@ -24,6 +25,7 @@ parser.add_argument('--workers', default=4, type=int, help='number of workers')
 parser.add_argument('--batch_size', default=16, type=int, help='batch size')
 parser.add_argument('--lr', type=float, default=0.0002, help='initial learning rate for adam')
 parser.add_argument('--evaluate', action='store_true', help='If it is in evaluate mode')
+parser.add_argument('--print_freq', default=100, help='The frequency of printing results')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum for sgd, alpha parameter for adam')
 parser.add_argument('--beta', default=0.999, type=float, metavar='M',
@@ -112,15 +114,27 @@ def train(args, train_loader, bio_net, optimizer, epoch_size, logger):
 
         # compute output
         estimated_y = bio_net(data)
+        estimated_y = estimated_y.view(-1)
 
+        value = value.float()
+        value = value.to(device)
         loss = value - estimated_y
+        # print("value is:", value.size())
+        # print("estimated_y:", estimated_y.size())
 
         # record loss and EPE
-        losses.update(loss.item(), args.batch_size)
+        # print("loss", loss.size())
+        # print("loss.item:", loss)
+
+        loss_sum = torch.sum(loss.data)
+        loss_sum = Variable(loss_sum, requires_grad=True)
+        # print("loss.item:", loss_sum, loss_sum.item())
+        # print("args.batch_size", args.batch_size)
+        losses.update(loss_sum.item(), args.batch_size)
 
         # compute gradient and do Adam step
         optimizer.zero_grad()
-        loss.backward()
+        loss_sum.backward()
         optimizer.step()
 
         # measure elapsed time
@@ -134,8 +148,6 @@ def train(args, train_loader, bio_net, optimizer, epoch_size, logger):
             break
 
         n_iter += 1
-
-        print("epoch: {} loss: {}".format(i, loss))
 
     return losses.avg[0]
 

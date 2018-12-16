@@ -75,6 +75,7 @@ class AverageMeter(object):
         self.count = 0
 
     def update(self, val, n=1):
+        # print("val", val)
         if not isinstance(val, list):
             val = [val]
         assert(len(val) == self.meters)

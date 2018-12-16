@@ -46,7 +46,7 @@ class BioModelCnn(nn.Module):
         self.beta = beta
 
         conv_planes = [32, 64, 128]
-        self.conv1 = downsample_conv(3,              conv_planes[0], kernel_size=7)
+        self.conv1 = downsample_conv(1,              conv_planes[0], kernel_size=7)
         self.conv2 = downsample_conv(conv_planes[0], conv_planes[1], kernel_size=5)
         self.conv3 = downsample_conv(conv_planes[1], conv_planes[2])
 
@@ -55,7 +55,14 @@ class BioModelCnn(nn.Module):
         self.upconv3 = upconv(upconv_planes[0], upconv_planes[1])
         self.upconv2 = upconv(upconv_planes[1], upconv_planes[2])
         self.upconv1 = upconv(upconv_planes[2], upconv_planes[3])
-        self.bio_pred = nn.Conv2d(upconv_planes[3], 1, kernel_size=1, padding=0)
+
+        fc_nodes = [64, 32, 10]
+
+        self.fc1 = nn.Linear(16 * 400 * 16, fc_nodes[0])
+        self.fc2 = nn.Linear(fc_nodes[0], fc_nodes[1])
+        self.fc3 = nn.Linear(fc_nodes[1], fc_nodes[2])
+
+        self.bio_pred = nn.Linear(fc_nodes[2], 1)
 
     def init_weights(self):
         for m in self.modules():
@@ -69,9 +76,25 @@ class BioModelCnn(nn.Module):
         out_conv2 = self.conv2(out_conv1)
         out_conv3 = self.conv3(out_conv2)
         out_upconv4 = self.upconv4(out_conv3)
-        out_upconv5 = self.upconv4(out_upconv4)
-        out_upconv6 = self.upconv4(out_upconv5)
+        out_upconv5 = self.upconv3(out_upconv4)
+        out_upconv6 = self.upconv2(out_upconv5)
+        out_upconv7 = self.upconv1(out_upconv6)
 
-        bio_pred = self.bio_pred(out_upconv6)
+        # print("upconvplanes: ", out_upconv7.size())
+        out = out_upconv7.view(-1, 16 * 400 * 16)
+        # print("out: ", out.size())
+
+        out_fc1 = self.fc1(out)
+        # print("out_fc1: ", out_fc1.size())
+
+        out_fc2 = self.fc2(out_fc1)
+        # print("out_fc2: ", out_fc2.size())
+
+        out_fc3 = self.fc3(out_fc2)
+        # print("out_fc3: ", out_fc3.size())
+
+        bio_pred = self.bio_pred(out_fc3)
+
+        # print("bio_pred: ", bio_pred.size())
 
         return bio_pred

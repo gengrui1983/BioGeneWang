@@ -1,3 +1,4 @@
+import array
 import random
 
 import numpy as np
@@ -46,10 +47,19 @@ class BioData(data.Dataset):
     def __getitem__(self, index):
         sample = self.samples[index]
 
+        # print("sample:{}\nThe length of sample is:{}".format(sample, len(sample.get('X'))/4))
+
         s_array = np.array(list(sample.get('X')))
-        s_array = s_array.view(dtype=np.int16, type=np.matrix)
-        s_array = s_array.view(-1, 24)
-        s_array = s_array.astype(float)
+        # print("1, ", s_array)
+        # print(s_array)
+        s_array = list(map(int, s_array))
+        s_array = torch.Tensor(s_array)
+        s_array = s_array.view(-1, 4)
+        s_array.unsqueeze_(0)
+
+        # print("array:", s_array)
+        # print("array.dtype", s_array.dtype)
+        # print("array.size", s_array.size())
 
         y_float = float(self.samples[index].get('y'))
         return s_array, y_float
